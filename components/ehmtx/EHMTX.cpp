@@ -17,6 +17,7 @@ namespace esphome
     this->gauge_value = 0;
     this->icon_count = 0;
     this->last_clock_time = 0;
+    this->force_clock_time = 30;
 
 #ifdef USE_EHMTX_SELECT
     this->select = NULL;
@@ -59,6 +60,12 @@ namespace esphome
   {
     this->weekday_color = Color((uint8_t)r & 248, (uint8_t)g & 252, (uint8_t)b & 248);
     ESP_LOGD("EHMTX", "weekday color: %d g: %d b: %d", r, g, b);
+  }
+
+  void EHMTX::set_force_clock_time(uint8_t t)
+  {
+    this->force_clock_time = t;
+    ESP_LOGD("EHMTX", "force clock time: %d", t);
   }
 
   void EHMTX::set_clock_color(int r, int g, int b)
@@ -123,14 +130,14 @@ namespace esphome
     {
       this->show_gauge = true;
       this->gauge_value = (uint8_t)(100 - val) * 7 / 100;
-      ESP_LOGD(TAG, "gauge value: %d => %d",val,  this->gauge_value);
+      ESP_LOGD(TAG, "gauge value: %d => %d", val, this->gauge_value);
     }
   }
 
   void EHMTX::draw_clock()
   {
     if (this->clock->now().timestamp > 6000) // valid time
-    { 
+    {
       time_t ts = this->clock->now().timestamp;
       if (!this->show_date or ((this->next_action_time - ts) < this->clock_time))
       {
@@ -169,7 +176,7 @@ namespace esphome
   void EHMTX::tick()
   {
     time_t ts = this->clock->now().timestamp;
-    
+
     if (ts > this->next_action_time)
     {
       if (this->show_icons)
@@ -193,8 +200,8 @@ namespace esphome
       else
       {
         this->show_screen = false;
-        
-        if (!(ts - this->last_clock_time > 20)) // force clock if last time more the 60s old
+
+        if (!(ts - this->last_clock_time > this->force_clock_time)) // force clock if last time more the 60s old
         {
           bool has_next_screen = this->store->move_next();
           if (has_next_screen)
@@ -204,13 +211,13 @@ namespace esphome
         }
         if (this->show_screen == false)
         {
-          ESP_LOGD(TAG, "next action: show clock/date for %d/%d sec",this->clock_time, this->screen_time-this->clock_time);
+          ESP_LOGD(TAG, "next action: show clock/date for %d/%d sec", this->clock_time, this->screen_time - this->clock_time);
           this->last_clock_time = ts;
           this->next_action_time = ts + this->screen_time;
         }
         else
         {
-          ESP_LOGD(TAG, "next action: show screen \"%s\" for %d sec", this->icons[this->store->current()->icon]->name.c_str() ,this->store->current()->display_duration);
+          ESP_LOGD(TAG, "next action: show screen \"%s\" for %d sec", this->icons[this->store->current()->icon]->name.c_str(), this->store->current()->display_duration);
           this->next_action_time = ts + this->store->current()->display_duration;
           for (auto *t : on_next_screen_triggers_)
           {
@@ -420,6 +427,8 @@ namespace esphome
     ESP_LOGCONFIG(TAG, "Time format: %s", this->time_fmt.c_str());
     ESP_LOGCONFIG(TAG, "Intervall (ms) scroll: %d anim: %d", this->scroll_intervall, this->anim_intervall);
     ESP_LOGCONFIG(TAG, "Displaytime (s) clock: %d screen: %d", this->clock_time, this->screen_time);
+    ESP_LOGCONFIG(TAG, "Max Seconds until next Clock Display: %d", this->force_clock_time);
+
     if (this->show_day_of_week)
     {
       ESP_LOGCONFIG(TAG, "show day of week");

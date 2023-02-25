@@ -23,16 +23,19 @@ MAXICONS = 72
 ICONWIDTH = 8
 ICONHEIGHT = 8
 ICONBUFFERSIZE = ICONWIDTH * ICONHEIGHT
-ICONSIZE = [ICONWIDTH,ICONHEIGHT]
+ICONSIZE = [ICONWIDTH, ICONHEIGHT]
 SVG_START = '<svg width="80px" height="80px" viewBox="0 0 80 80">'
 
 SVG_END = "</svg>"
 
-def rgb888_svg(x,y,r,g,b):
+
+def rgb888_svg(x, y, r, g, b):
     return f"<rect style=\"fill:rgb({r},{g},{b});\" x=\"{x*10}\" y=\"{y*10}\" width=\"10\" height=\"10\"/>"
 
-def rgb565_svg(x,y,r,g,b):
+
+def rgb565_svg(x, y, r, g, b):
     return f"<rect style=\"fill:rgb({(r << 3) | (r >> 2)},{(g << 2) | (g >> 4)},{(b << 3) | (b >> 2)});\" x=\"{x*10}\" y=\"{y*10}\" width=\"10\" height=\"10\"/>"
+
 
 ehmtx_ns = cg.esphome_ns.namespace("esphome")
 EHMTX_ = ehmtx_ns.class_("EHMTX", cg.Component)
@@ -67,6 +70,7 @@ CONF_WEEK_ON_MONDAY = "week_start_monday"
 CONF_ICON = "icon_name"
 CONF_TEXT = "text"
 CONF_ALARM = "alarm"
+CONF_FORCE_CLOCK_TIME = "force_clock_time"
 
 EHMTX_SCHEMA = cv.Schema({
     cv.Required(CONF_ID): cv.declare_id(EHMTX_),
@@ -77,7 +81,7 @@ EHMTX_SCHEMA = cv.Schema({
         CONF_SHOWCLOCK, default="5"
     ): cv.templatable(cv.positive_int),
     cv.Optional(
-        CONF_SELECT, 
+        CONF_SELECT,
     ): cv.use_id(EHMTXSelect),
     cv.Optional(
         CONF_YOFFSET, default="6"
@@ -115,6 +119,9 @@ EHMTX_SCHEMA = cv.Schema({
     cv.Optional(
         CONF_DURATION, default="5"
     ): cv.templatable(cv.positive_int),
+    cv.Optional(
+        CONF_FORCE_CLOCK_TIME, default="60"
+    ): cv.templatable(cv.int_range(min=1, max=300)),
     cv.Optional(CONF_ON_NEXT_SCREEN): automation.validate_automation(
         {
             cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(NextScreenTrigger),
@@ -125,9 +132,9 @@ EHMTX_SCHEMA = cv.Schema({
             {
                 cv.Required(CONF_ID): cv.declare_id(Icons_),
 
-                cv.Exclusive(CONF_FILE,"uri"): cv.file_,
-                cv.Exclusive(CONF_URL,"uri"): cv.url,
-                cv.Exclusive(CONF_LAMEID,"uri"): cv.string,
+                cv.Exclusive(CONF_FILE, "uri"): cv.file_,
+                cv.Exclusive(CONF_URL, "uri"): cv.url,
+                cv.Exclusive(CONF_LAMEID, "uri"): cv.string,
                 cv.Optional(
                     CONF_DURATION, default="0"
                 ): cv.templatable(cv.positive_int),
@@ -159,19 +166,20 @@ NextScreenTrigger = ehmtx_ns.class_(
 
 AddScreenAction = ehmtx_ns.class_("AddScreenAction", automation.Action)
 
+
 @automation.register_action(
     "ehmtx.add.screen", AddScreenAction, ADD_SCREEN_ACTION_SCHEMA
 )
 async def ehmtx_add_screen_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
     var = cg.new_Pvariable(action_id, template_arg, paren)
-    
+
     template_ = await cg.templatable(config[CONF_ICON], args, cg.std_string)
     cg.add(var.set_icon(template_))
 
     template_ = await cg.templatable(config[CONF_TEXT], args, cg.std_string)
     cg.add(var.set_text(template_))
-     
+
     if CONF_DURATION in config:
         template_ = await cg.templatable(config[CONF_DURATION], args, cg.uint8)
         cg.add(var.set_duration(template_))
@@ -189,6 +197,7 @@ SET_BRIGHTNESS_ACTION_SCHEMA = cv.Schema(
 
 SetBrightnessAction = ehmtx_ns.class_("SetBrightnessAction", automation.Action)
 
+
 @automation.register_action(
     "ehmtx.set.brightness", SetBrightnessAction, SET_BRIGHTNESS_ACTION_SCHEMA
 )
@@ -200,16 +209,18 @@ async def ehmtx_set_brightness_action_to_code(config, action_id, template_arg, a
 
     return var
 
+
 SET_COLOR_ACTION_SCHEMA = cv.Schema(
     {
-        cv.GenerateID(): cv.use_id(EHMTX_), 
-        cv.Optional(CONF_RED,default=80): cv.templatable(cv.uint8_t,),
-        cv.Optional(CONF_BLUE,default=80): cv.templatable(cv.uint8_t,),
-        cv.Optional(CONF_GREEN,default=80): cv.templatable(cv.uint8_t,),
+        cv.GenerateID(): cv.use_id(EHMTX_),
+        cv.Optional(CONF_RED, default=80): cv.templatable(cv.uint8_t,),
+        cv.Optional(CONF_BLUE, default=80): cv.templatable(cv.uint8_t,),
+        cv.Optional(CONF_GREEN, default=80): cv.templatable(cv.uint8_t,),
     }
 )
 
 SetClockColorAction = ehmtx_ns.class_("SetClockColor", automation.Action)
+
 
 @automation.register_action(
     "ehmtx.clock.color", SetClockColorAction, SET_COLOR_ACTION_SCHEMA
@@ -229,6 +240,7 @@ async def ehmtx_set_clock_color_action_to_code(config, action_id, template_arg, 
 
 SetTextColorAction = ehmtx_ns.class_("SetTextColor", automation.Action)
 
+
 @automation.register_action(
     "ehmtx.text.color", SetTextColorAction, SET_COLOR_ACTION_SCHEMA
 )
@@ -246,6 +258,7 @@ async def ehmtx_set_text_color_action_to_code(config, action_id, template_arg, a
     return var
 
 SetAlarmColorAction = ehmtx_ns.class_("SetAlarmColor", automation.Action)
+
 
 @automation.register_action(
     "ehmtx.alarm.color", SetAlarmColorAction, SET_COLOR_ACTION_SCHEMA
@@ -265,12 +278,13 @@ async def ehmtx_set_alarm_color_action_to_code(config, action_id, template_arg, 
 
 SET_FLAG_ACTION_SCHEMA = cv.Schema(
     {
-        cv.GenerateID(): cv.use_id(EHMTX_), 
-        cv.Optional(CONF_FLAG,default=True): cv.templatable(cv.boolean),
+        cv.GenerateID(): cv.use_id(EHMTX_),
+        cv.Optional(CONF_FLAG, default=True): cv.templatable(cv.boolean),
     }
 )
 
 SetShowDateAction = ehmtx_ns.class_("SetShowDate", automation.Action)
+
 
 @automation.register_action(
     "ehmtx.show.date", SetShowDateAction, SET_FLAG_ACTION_SCHEMA
@@ -281,25 +295,26 @@ async def ehmtx_show_date_action_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg, paren)
     template_ = await cg.templatable(config[CONF_FLAG], args, cg.bool_)
     cg.add(var.set_flag(template_))
-    
+
     return var
 
 SetShowDayOfWeekAction = ehmtx_ns.class_("SetShowDayOfWeek", automation.Action)
 
+
 @automation.register_action(
     "ehmtx.show.dayofweek", SetShowDayOfWeekAction, SET_FLAG_ACTION_SCHEMA
 )
-
 async def ehmtx_show_dayofweek_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
 
     var = cg.new_Pvariable(action_id, template_arg, paren)
     template_ = await cg.templatable(config[CONF_FLAG], args, cg.bool_)
     cg.add(var.set_flag(template_))
-    
+
     return var
 
 SetTodayColorAction = ehmtx_ns.class_("SetTodayColor", automation.Action)
+
 
 @automation.register_action(
     "ehmtx.today.color", SetTodayColorAction, SET_COLOR_ACTION_SCHEMA
@@ -318,10 +333,10 @@ async def ehmtx_set_today_color_action_to_code(config, action_id, template_arg, 
 
 SetWeekdayColorAction = ehmtx_ns.class_("SetWeekdayColor", automation.Action)
 
+
 @automation.register_action(
     "ehmtx.weekday.color", SetWeekdayColorAction, SET_COLOR_ACTION_SCHEMA
 )
-
 async def ehmtx_set_week_color_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
 
@@ -336,6 +351,7 @@ async def ehmtx_set_week_color_action_to_code(config, action_id, template_arg, a
     return var
 
 SetIndicatorOnAction = ehmtx_ns.class_("SetIndicatorOn", automation.Action)
+
 
 @automation.register_action(
     "ehmtx.indicator.on", SetIndicatorOnAction, SET_COLOR_ACTION_SCHEMA
@@ -362,6 +378,7 @@ DELETE_SCREEN_ACTION_SCHEMA = cv.Schema(
 
 DeleteScreenAction = ehmtx_ns.class_("DeleteScreen", automation.Action)
 
+
 @automation.register_action(
     "ehmtx.delete.screen", DeleteScreenAction, DELETE_SCREEN_ACTION_SCHEMA
 )
@@ -375,6 +392,7 @@ async def ehmtx_delete_screen_action_to_code(config, action_id, template_arg, ar
     return var
 
 ForceScreenAction = ehmtx_ns.class_("ForceScreen", automation.Action)
+
 
 @automation.register_action(
     "ehmtx.force.screen", ForceScreenAction, DELETE_SCREEN_ACTION_SCHEMA
@@ -396,6 +414,7 @@ INDICATOR_OFF_ACTION_SCHEMA = cv.Schema(
     }
 )
 
+
 @automation.register_action(
     "ehmtx.indicator.off", SetIndicatorOffAction, INDICATOR_OFF_ACTION_SCHEMA
 )
@@ -407,6 +426,7 @@ async def ehmtx_set_indicator_off_action_to_code(config, action_id, template_arg
 
 CODEOWNERS = ["@lubeda"]
 
+
 async def to_code(config):
 
     from PIL import Image
@@ -417,26 +437,30 @@ async def to_code(config):
     </STYLE><BODY>\
 '''
     for conf in config[CONF_ICONS]:
-                
+
         if CONF_FILE in conf:
             path = CORE.relative_config_path(conf[CONF_FILE])
             try:
                 image = Image.open(path)
             except Exception as e:
-                raise core.EsphomeError(f" ICONS: Could not load image file {path}: {e}")
+                raise core.EsphomeError(
+                    f" ICONS: Could not load image file {path}: {e}")
         elif CONF_LAMEID in conf:
-            r = requests.get("https://developer.lametric.com/content/apps/icon_thumbs/" + conf[CONF_LAMEID], timeout=4.0)
+            r = requests.get(
+                "https://developer.lametric.com/content/apps/icon_thumbs/" + conf[CONF_LAMEID], timeout=4.0)
             if r.status_code != requests.codes.ok:
-                raise core.EsphomeError(f" ICONS: Could not download image file {conf[CONF_LAMEID]}: {conf[CONF_ID]}")
+                raise core.EsphomeError(
+                    f" ICONS: Could not download image file {conf[CONF_LAMEID]}: {conf[CONF_ID]}")
             image = Image.open(io.BytesIO(r.content))
         elif CONF_URL in conf:
             r = requests.get(conf[CONF_URL], timeout=4.0)
             if r.status_code != requests.codes.ok:
-                raise core.EsphomeError(f" ICONS: Could not download image file {conf[CONF_URL]}: {conf[CONF_ID]}")
+                raise core.EsphomeError(
+                    f" ICONS: Could not download image file {conf[CONF_URL]}: {conf[CONF_ID]}")
             image = Image.open(io.BytesIO(r.content))
-        
+
         width, height = image.size
-        
+
         if (width != ICONWIDTH) or (height != ICONHEIGHT):
             image = image.resize(ICONSIZE)
             width, height = image.size
@@ -445,10 +469,10 @@ async def to_code(config):
             frames = min(image.n_frames, MAXFRAMES)
         else:
             frames = 1
-            
+
         if (conf[CONF_DURATION] == 0):
             try:
-                duration =  image.info['duration']         
+                duration = image.info['duration']
             except:
                 duration = config[CONF_ANIMINTERVALL]
         else:
@@ -456,7 +480,7 @@ async def to_code(config):
 
         html_string += F"<BR><B>{conf[CONF_ID]}</B>&nbsp;-&nbsp;({duration} ms):<BR>"
 
-        pos = 0 
+        pos = 0
         frameIndex = 0
         html_string += f"<DIV ID={conf[CONF_ID]}>"
         data = [0 for _ in range(ICONBUFFERSIZE * 2 * frames)]
@@ -476,16 +500,16 @@ async def to_code(config):
                 B = pix[2] >> 3
                 x = (i % ICONWIDTH)
                 y = i//ICONHEIGHT
-                i +=1
+                i += 1
                 rgb = (R << 11) | (G << 5) | B
-                html_string += rgb565_svg(x,y,R,G,B)
+                html_string += rgb565_svg(x, y, R, G, B)
                 data[pos] = rgb >> 8
                 pos += 1
                 data[pos] = rgb & 255
                 pos += 1
             html_string += SVG_END
         html_string += f"</DIV>"
-       
+
         rhs = [HexInt(x) for x in data]
 
         prog_arr = cg.progmem_array(conf[CONF_RAW_DATA_ID], rhs)
@@ -505,16 +529,16 @@ async def to_code(config):
         cg.add(var.add_icon(RawExpression(str(conf[CONF_ID]))))
 
     html_string += "</BODY></HTML>"
-    
+
     if config[CONF_HTML]:
         try:
-            with open(CORE.config_path.replace(".yaml","") + ".html", 'w') as f:
+            with open(CORE.config_path.replace(".yaml", "") + ".html", 'w') as f:
                 f.truncate()
                 f.write(html_string)
                 f.close()
         except:
-            print("Error writing HTML file")    
-    
+            print("Error writing HTML file")
+
     cg.add(var.set_clock_time(config[CONF_SHOWCLOCK]))
     cg.add(var.set_default_brightness(config[CONF_BRIGHTNESS]))
     cg.add(var.set_screen_time(config[CONF_SHOWSCREEN]))
@@ -527,6 +551,7 @@ async def to_code(config):
     cg.add(var.set_show_day_of_week(config[CONF_SHOWDOW]))
     cg.add(var.set_show_date(config[CONF_SHOWDATE]))
     cg.add(var.set_font_offset(config[CONF_XOFFSET], config[CONF_YOFFSET]))
+    cg.add(var.set_force_clock_time(config[CONF_FORCE_CLOCK_TIME]))
 
     disp = await cg.get_variable(config[CONF_DISPLAY])
     cg.add(var.set_display(disp))

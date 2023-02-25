@@ -32,6 +32,8 @@ namespace esphome
     Color clock_color;
     Color today_color;
     Color weekday_color;
+    uint8_t force_clock_time;
+
     EHMTX_store *store;
     std::vector<EHMTXNextScreenTrigger *> on_next_screen_triggers_;
     void internal_add_screen(uint8_t icon, std::string text, uint16_t duration, bool alarm);
@@ -106,6 +108,7 @@ namespace esphome
     void set_clock_color(int r, int g, int b);
     void set_today_color(int r, int g, int b);
     void set_weekday_color(int r, int g, int b);
+    void set_force_clock_time(uint8_t t);
     void set_alarm_color(int r, int g, int b);
     void set_icon_count(uint8_t ic);
     void draw_clock();
