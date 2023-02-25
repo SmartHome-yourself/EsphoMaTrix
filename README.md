@@ -213,6 +213,7 @@ ehmtx:
   show_clock: 6 
   show_screen: 8
   duration: 5
+  force_clock_time: 30
   html: true
   display8x32: ehmtxdisplay
   time: EHMTX_clock
@@ -232,6 +233,8 @@ _Configuration variables:_
 **show_clock (Optional, seconds):** duration to display the clock after this time the date is display until next "show_screen". If `show_date` is false `show_clock` is false and the clock will be display as long as a normal screen!
 
 **show_screen (Optional, seconds):** duration to display a screen or a clock/date sequence, a long text will be scrolled at least two times 
+
+**force_clock_time (Optional, seconds):** If there are several scenes, the clock/date scene will be displayed again after this duration in seconds has elapsed. *(default: 60)*
 
 ![timing](./images/timing.png)
 
